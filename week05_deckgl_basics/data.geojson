@@ -1,0 +1,83 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "浦东转换站",
+        "load": 0.75
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.79, 31.25]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "苏州北站",
+        "load": 0.42
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.63, 31.50]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "嘉兴枢纽",
+        "load": 0.58
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.76, 30.76]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "浦东转换站 → 苏州北站",
+        "load": 0.68
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [121.79, 31.25],
+          [121.18, 31.38],
+          [120.63, 31.5]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "苏州北站 → 嘉兴枢纽",
+        "load": 0.53
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [120.63, 31.5],
+          [120.57, 31.18],
+          [120.76, 30.76]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "嘉兴枢纽 → 浦东转换站",
+        "load": 0.81
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [120.76, 30.76],
+          [121.24, 30.92],
+          [121.79, 31.25]
+        ]
+      }
+    }
+  ]
+}
