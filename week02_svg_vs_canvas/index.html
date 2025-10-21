@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Week 02 · SVG vs Canvas 对比实验</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+        background: radial-gradient(circle at 20% 20%, #1e293b, #020617 68%);
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 1.5rem clamp(1.5rem, 4vw, 3rem);
+        background: rgba(15, 23, 42, 0.85);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 24px 40px -32px rgba(14, 165, 233, 0.6);
+      }
+
+      header h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+      }
+
+      header p {
+        margin: 0;
+        line-height: 1.6;
+        max-width: 960px;
+        opacity: 0.9;
+      }
+
+      main {
+        display: grid;
+        gap: clamp(1.5rem, 3vw, 3rem);
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        padding: clamp(1.5rem, 4vw, 3rem);
+      }
+
+      .panel {
+        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 20px;
+        padding: 1.25rem clamp(1.5rem, 3vw, 2.25rem);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 30px 48px -36px rgba(14, 165, 233, 0.55);
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        letter-spacing: 0.01em;
+      }
+
+      .panel p {
+        margin: 0;
+        opacity: 0.75;
+        line-height: 1.6;
+        font-size: 0.95rem;
+      }
+
+      .viewport {
+        position: relative;
+        aspect-ratio: 3 / 2;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: radial-gradient(circle at top, rgba(37, 99, 235, 0.18), rgba(15, 23, 42, 0.95));
+      }
+
+      canvas,
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      svg {
+        overflow: visible;
+      }
+
+      .metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.5rem;
+        font-size: 0.9rem;
+        letter-spacing: 0.01em;
+      }
+
+      .metrics span strong {
+        color: #38bdf8;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        font-size: 0.95rem;
+      }
+
+      .controls label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(15, 23, 42, 0.72);
+        padding: 0.6rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      input[type="range"] {
+        accent-color: #38bdf8;
+      }
+
+      .legend {
+        padding: clamp(1rem, 3vw, 1.75rem) clamp(1.5rem, 4vw, 3rem) 2.5rem;
+        max-width: 960px;
+        line-height: 1.7;
+        font-size: 0.95rem;
+        opacity: 0.82;
+      }
+
+      .legend code {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.4rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        font-size: 0.85rem;
+      }
+
+      .svg-edge {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        mix-blend-mode: screen;
+      }
+
+      .svg-node {
+        cursor: pointer;
+        transition: transform 160ms ease, filter 160ms ease;
+      }
+
+      .svg-node.is-active {
+        filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.85));
+      }
+
+      footer {
+        margin-top: auto;
+        padding: 1rem 1.5rem 1.75rem;
+        text-align: center;
+        font-size: 0.85rem;
+        opacity: 0.7;
+      }
+
+      @media (max-width: 720px) {
+        header {
+          text-align: center;
+        }
+
+        .controls {
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Week 02 · SVG vs Canvas 对比实验</h1>
+      <p>
+        通过同一套电力网络数据在 SVG 与 Canvas 上同步渲染，观察两种图形系统的绘制差异、交互模型以及性能表现。调整负载波动参数，记录
+        FPS、命中测试的差异与调优思路。
+      </p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Canvas 渲染管线</h2>
+        <p>手工控制绘制顺序、命中测试与动画循环，观察在高频率刷新下的性能与内存占用。</p>
+        <div class="viewport">
+          <canvas id="canvas-board" width="720" height="480"></canvas>
+        </div>
+        <div class="metrics">
+          <span>FPS：<strong id="canvas-fps">--</strong></span>
+          <span id="canvas-hover">移动到节点区域进行命中测试</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>SVG 事件模型</h2>
+        <p>利用 DOM 事件与矢量节点进行命中反馈，关注大量要素下的重绘开销与可访问性。</p>
+        <div class="viewport">
+          <svg id="network-svg" viewBox="0 0 720 480" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="metrics">
+          <span id="svg-hover">悬停圆点即可读取节点信息</span>
+        </div>
+      </section>
+    </main>
+
+    <div class="legend">
+      <div class="controls">
+        <label>
+          负载波动强度
+          <input id="load-intensity" type="range" min="10" max="90" step="5" value="40" />
+          <strong><span id="intensity-value">40</span>%</strong>
+        </label>
+        <span>
+          建议：分别记录 <code>requestAnimationFrame</code> 循环中的 FPS 与 SVG DOM 数量，完成 Week 02 学习小结。
+        </span>
+      </div>
+    </div>
+
+    <footer>
+      使用 <code>python3 -m http.server</code> 启动本地服务器即可预览。可在 <code>main.js</code> 中扩展节点数量、添加虚线光环或切换为离屏 Canvas。
+    </footer>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
