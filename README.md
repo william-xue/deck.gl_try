@@ -7,7 +7,9 @@
 ```
 .
 ├── week01_canvas_basics/      # Canvas 基础示例与练习
+├── week02_svg_vs_canvas/      # SVG 与 Canvas 对比实验
 ├── week03_webgl_intro/        # 原生 WebGL 三角形示例
+├── week04_threejs_scene/      # Three.js 场景化游览
 ├── week05_deckgl_basics/      # deck.gl 地理可视化入门
 ├── week06_nebulagl_edit/      # nebula.gl 可编辑图层骨架
 ├── notes/                     # （预留）学习笔记与资料整理
@@ -73,7 +75,7 @@ git push origin main
 ---
 
 未来计划：
-- `week02_svg_vs_canvas/`、`week04_threejs_scene/` 等目录可在完成对应周任务后添加。
+- 继续扩展 GPU 后处理、WebGPU 相关练习目录，完善后续周的进阶路线。
 - `notes/` 目录可以存储学习心得、问题记录与性能数据截图。
 
 欢迎持续迭代，保持学习节奏！
