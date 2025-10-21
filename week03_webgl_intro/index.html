@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Week 03 · WebGL 三角形</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Fira Code", "JetBrains Mono", Consolas, monospace;
+        background: #020617;
+        color: #e2e8f0;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+
+      .card {
+        background: rgba(15, 23, 42, 0.8);
+        padding: 2rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 24px 48px -32px rgba(14, 116, 144, 0.8);
+      }
+
+      canvas {
+        width: 480px;
+        height: 360px;
+        border-radius: 12px;
+        display: block;
+      }
+
+      p {
+        max-width: 480px;
+        line-height: 1.6;
+        margin-top: 1rem;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <canvas id="gl-canvas" width="960" height="720"></canvas>
+      <p>
+        这个示例展示了最小的 WebGL 渲染管线：顶点着色器上传旋转矩阵，片元着色器做颜色插值。请在
+        <code>main.js</code> 中练习 attribute/uniform/buffer 的创建与调试，逐步完成 Week 03 任务。
+      </p>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

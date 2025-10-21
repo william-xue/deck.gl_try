@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Week 01 · Canvas 基础</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      header,
+      footer {
+        padding: 1rem 1.5rem;
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding-bottom: 1.5rem;
+      }
+
+      canvas {
+        width: min(90vw, 720px);
+        height: min(60vh, 480px);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+      }
+
+      button {
+        background: #38bdf8;
+        color: #0f172a;
+        border: none;
+        border-radius: 999px;
+        padding: 0.5rem 1.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: transform 150ms ease, box-shadow 150ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px -12px rgba(56, 189, 248, 0.6);
+      }
+
+      .panel {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .legend {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        max-width: 720px;
+        line-height: 1.6;
+        padding: 0 1rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Week 01 · Canvas 动画与电力节点</h1>
+      <p>目标：熟悉 2D 绘制、坐标变换与动画循环。尝试暂停/恢复动画，并记录学习笔记。</p>
+    </header>
+
+    <main>
+      <div class="panel">
+        <button id="toggle">暂停动画</button>
+        <span id="status"></span>
+      </div>
+      <canvas id="stage" width="960" height="640"></canvas>
+      <p class="legend">
+        蓝色轨道表示行星路径，节点网络模拟电力系统：圆点为母线，连线为输电线路，线条颜色根据载荷强度渐变。
+        可以在 <code>main.js</code> 中调整节点位置、动画速度与样式，完成每日练习目标。
+      </p>
+    </main>
+
+    <footer>
+      <small>提示：使用 <code>python3 -m http.server</code> 启动本地服务器预览；建议在 <code>notes/</code> 目录记录每次练习心得。</small>
+    </footer>
+
+    <script src="main.js" type="module"></script>
+  </body>
+</html>

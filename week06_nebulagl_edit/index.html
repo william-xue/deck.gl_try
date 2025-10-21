@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Week 06 · nebula.gl 可编辑图层</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background: linear-gradient(160deg, #0f172a 0%, #020617 60%);
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 1rem 1.5rem;
+        background: rgba(15, 23, 42, 0.88);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      main {
+        flex: 1;
+        position: relative;
+      }
+
+      #deck {
+        position: absolute;
+        inset: 0;
+      }
+
+      .controls {
+        position: absolute;
+        top: 1.5rem;
+        left: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: rgba(15, 23, 42, 0.85);
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 18px 36px -24px rgba(56, 189, 248, 0.7);
+      }
+
+      button {
+        background: rgba(56, 189, 248, 0.15);
+        color: #e0f2fe;
+        border: 1px solid rgba(125, 211, 252, 0.4);
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 120ms ease, transform 120ms ease;
+      }
+
+      button.active,
+      button:hover {
+        background: rgba(56, 189, 248, 0.35);
+        transform: translateY(-1px);
+      }
+
+      textarea {
+        width: min(420px, 80vw);
+        min-height: 140px;
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+        resize: vertical;
+      }
+
+      footer {
+        padding: 1rem 1.5rem;
+        background: rgba(15, 23, 42, 0.9);
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      details {
+        margin-top: 0.75rem;
+      }
+    </style>
+    <script src="https://unpkg.com/deck.gl@8.9.27/dist.min.js"></script>
+    <script src="https://unpkg.com/nebula.gl@0.22.1/dist/umd/nebula.gl.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Week 06 · nebula.gl 可编辑线路练习</h1>
+      <p>
+        目标：练习 <code>EditableGeoJsonLayer</code>，支持拖拽节点、绘制线路、计算长度，并将更新后的 GeoJSON 导出。
+      </p>
+    </header>
+    <main>
+      <div id="deck"></div>
+      <div class="controls">
+        <strong>当前模式</strong>
+        <button data-mode="modify">Modify（拖拽）</button>
+        <button data-mode="translate">Translate（整体移动）</button>
+        <button data-mode="drawLineString">Draw LineString（新增线路）</button>
+        <button data-mode="measureDistance">Measure（测距）</button>
+        <textarea id="geojson-output" readonly placeholder="编辑后的 GeoJSON 将显示在此处"></textarea>
+      </div>
+    </main>
+    <footer>
+      <details open>
+        <summary>练习建议</summary>
+        <ul>
+          <li>完成拖拽端点吸附、线路长度实时显示。</li>
+          <li>结合 deck.gl 图层展示实时负载颜色。</li>
+          <li>导出 GeoJSON 后与后端结果对比误差。</li>
+        </ul>
+      </details>
+    </footer>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
