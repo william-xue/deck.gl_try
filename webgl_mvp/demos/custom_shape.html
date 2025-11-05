@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>自定义顶点模型 · MVP 演示</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      header {
+        padding: 20px 28px 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      canvas {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .panel {
+        padding: 16px 28px 26px;
+        background: rgba(15, 23, 42, 0.85);
+        border-top: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .panel p {
+        margin: 6px 0 14px;
+        line-height: 1.6;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+      }
+
+      input[type="range"] {
+        accent-color: #f97316;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>自定义几何体：四面体顶点 + 顶点颜色</h1>
+      <p>通过替换 <code>positions</code> / <code>colors</code> 展示自定义模型如何应用在 MVP 管线中。</p>
+    </header>
+
+    <canvas id="glCanvas"></canvas>
+
+    <section class="panel">
+      <label>
+        自动旋转速度（度/秒）
+        <input id="rotation-speed" type="range" min="0" max="180" value="45" />
+      </label>
+    </section>
+
+    <script>
+      // ====== 基础矩阵工具（含中文注释） ======
+      function mat4Identity() {
+        return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      }
+
+      function mat4Multiply(a, b) {
+        const out = new Array(16);
+
+        const a00 = a[0],
+          a01 = a[1],
+          a02 = a[2],
+          a03 = a[3];
+        const a10 = a[4],
+          a11 = a[5],
+          a12 = a[6],
+          a13 = a[7];
+        const a20 = a[8],
+          a21 = a[9],
+          a22 = a[10],
+          a23 = a[11];
+        const a30 = a[12],
+          a31 = a[13],
+          a32 = a[14],
+          a33 = a[15];
+
+        let b0, b1, b2, b3;
+
+        b0 = b[0];
+        b1 = b[1];
+        b2 = b[2];
+        b3 = b[3];
+        out[0] = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+        out[1] = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+        out[2] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+        out[3] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+        b0 = b[4];
+        b1 = b[5];
+        b2 = b[6];
+        b3 = b[7];
+        out[4] = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+        out[5] = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+        out[6] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+        out[7] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+        b0 = b[8];
+        b1 = b[9];
+        b2 = b[10];
+        b3 = b[11];
+        out[8] = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+        out[9] = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+        out[10] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+        out[11] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+        b0 = b[12];
+        b1 = b[13];
+        b2 = b[14];
+        b3 = b[15];
+        out[12] = a00 * b0 + a10 * b1 + a20 * b2 + a30 * b3;
+        out[13] = a01 * b0 + a11 * b1 + a21 * b2 + a31 * b3;
+        out[14] = a02 * b0 + a12 * b1 + a22 * b2 + a32 * b3;
+        out[15] = a03 * b0 + a13 * b1 + a23 * b2 + a33 * b3;
+
+        return out;
+      }
+
+      function mat4Rotation(axis, rad) {
+        const c = Math.cos(rad);
+        const s = Math.sin(rad);
+        if (axis === "x") {
+          return [
+            1,
+            0,
+            0,
+            0,
+            0,
+            c,
+            s,
+            0,
+            0,
+            -s,
+            c,
+            0,
+            0,
+            0,
+            0,
+            1,
+          ];
+        }
+        if (axis === "y") {
+          return [
+            c,
+            0,
+            -s,
+            0,
+            0,
+            1,
+            0,
+            0,
+            s,
+            0,
+            c,
+            0,
+            0,
+            0,
+            0,
+            1,
+          ];
+        }
+        return mat4Identity();
+      }
+
+      function mat4Perspective(fovDeg, aspect, near, far) {
+        const fovRad = (fovDeg * Math.PI) / 180;
+        const f = 1 / Math.tan(fovRad / 2);
+        const nf = 1 / (near - far);
+        return [
+          f / aspect,
+          0,
+          0,
+          0,
+          0,
+          f,
+          0,
+          0,
+          0,
+          0,
+          (far + near) * nf,
+          -1,
+          0,
+          0,
+          2 * far * near * nf,
+          0,
+        ];
+      }
+
+      function mat4LookAt(eye, target, up) {
+        const [ex, ey, ez] = eye;
+        const [tx, ty, tz] = target;
+        const [ux, uy, uz] = up;
+
+        let zx = ex - tx;
+        let zy = ey - ty;
+        let zz = ez - tz;
+        let len = Math.hypot(zx, zy, zz);
+        if (len === 0) {
+          zx = 0;
+          zy = 0;
+          zz = 1;
+        } else {
+          zx /= len;
+          zy /= len;
+          zz /= len;
+        }
+
+        let xx = uy * zz - uz * zy;
+        let xy = uz * zx - ux * zz;
+        let xz = ux * zy - uy * zx;
+        len = Math.hypot(xx, xy, xz);
+        if (len !== 0) {
+          xx /= len;
+          xy /= len;
+          xz /= len;
+        }
+
+        const yx = zy * xz - zz * xy;
+        const yy = zz * xx - zx * xz;
+        const yz = zx * xy - zy * xx;
+
+        return [
+          xx,
+          yx,
+          zx,
+          0,
+          xy,
+          yy,
+          zy,
+          0,
+          xz,
+          yz,
+          zz,
+          0,
+          -(xx * ex + xy * ey + xz * ez),
+          -(yx * ex + yy * ey + yz * ez),
+          -(zx * ex + zy * ey + zz * ez),
+          1,
+        ];
+      }
+
+      // ====== WebGL 初始化 ======
+      const canvas = document.getElementById("glCanvas");
+      const gl = canvas.getContext("webgl");
+      if (!gl) {
+        alert("当前浏览器不支持 WebGL");
+        throw new Error("WebGL not supported");
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.floor(canvas.clientWidth * dpr);
+        const height = Math.floor(canvas.clientHeight * dpr);
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      const vertexSource = `
+        attribute vec3 aPosition;
+        attribute vec3 aColor;
+        uniform mat4 uModel;
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+        varying vec3 vColor;
+        void main() {
+          gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+          vColor = aColor;
+        }
+      `;
+
+      const fragmentSource = `
+        precision mediump float;
+        varying vec3 vColor;
+        void main() {
+          gl_FragColor = vec4(vColor, 1.0);
+        }
+      `;
+
+      function createShader(gl, type, src) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const info = gl.getShaderInfoLog(shader);
+          gl.deleteShader(shader);
+          throw new Error("着色器编译失败：" + info);
+        }
+        return shader;
+      }
+
+      function createProgram(gl, vsSrc, fsSrc) {
+        const program = gl.createProgram();
+        const vs = createShader(gl, gl.VERTEX_SHADER, vsSrc);
+        const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          const info = gl.getProgramInfoLog(program);
+          gl.deleteProgram(program);
+          throw new Error("Program 链接失败：" + info);
+        }
+        return program;
+      }
+
+      const program = createProgram(gl, vertexSource, fragmentSource);
+      gl.useProgram(program);
+
+      const aPosition = gl.getAttribLocation(program, "aPosition");
+      const aColor = gl.getAttribLocation(program, "aColor");
+      const uModel = gl.getUniformLocation(program, "uModel");
+      const uView = gl.getUniformLocation(program, "uView");
+      const uProjection = gl.getUniformLocation(program, "uProjection");
+
+      // ====== 这里替换为自定义的四面体顶点和颜色 ======
+      const tetraPositions = new Float32Array([
+        // 顶点顺序：顶点 + 底面三个点组成四个三角面
+        // 面 1
+        0, 1.2, 0,
+        -1, -1, 1,
+        1, -1, 1,
+        // 面 2
+        0, 1.2, 0,
+        1, -1, 1,
+        0, -1, -1.4,
+        // 面 3
+        0, 1.2, 0,
+        0, -1, -1.4,
+        -1, -1, 1,
+        // 底面
+        -1, -1, 1,
+        0, -1, -1.4,
+        1, -1, 1,
+      ]);
+
+      const tetraColors = new Float32Array([
+        // 为每个顶点设置不同颜色，方便观察插值
+        1, 0.3, 0.4,
+        0.2, 0.7, 1,
+        1, 0.9, 0.2,
+
+        1, 0.3, 0.4,
+        1, 0.9, 0.2,
+        0.3, 1, 0.6,
+
+        1, 0.3, 0.4,
+        0.3, 1, 0.6,
+        0.2, 0.7, 1,
+
+        0.2, 0.7, 1,
+        0.3, 1, 0.6,
+        1, 0.9, 0.2,
+      ]);
+
+      const positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, tetraPositions, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(aPosition);
+      gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+
+      const colorBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, tetraColors, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(aColor);
+      gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+
+      gl.enable(gl.DEPTH_TEST);
+
+      const speedSlider = document.getElementById("rotation-speed");
+
+      function render(time) {
+        resizeCanvas();
+        gl.clearColor(0.04, 0.07, 0.16, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        const speed = Number(speedSlider.value);
+        const t = (time / 1000) * (speed / 180 * Math.PI);
+
+        const model = mat4Multiply(mat4Rotation("y", t), mat4Rotation("x", t * 0.7));
+        const view = mat4LookAt([0, 1.5, 6], [0, 0, 0], [0, 1, 0]);
+        const projection = mat4Perspective(45, canvas.width / canvas.height, 0.1, 100);
+
+        gl.uniformMatrix4fv(uModel, false, new Float32Array(model));
+        gl.uniformMatrix4fv(uView, false, new Float32Array(view));
+        gl.uniformMatrix4fv(uProjection, false, new Float32Array(projection));
+
+        gl.drawArrays(gl.TRIANGLES, 0, tetraPositions.length / 3);
+
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+    </script>
+  </body>
+</html>
