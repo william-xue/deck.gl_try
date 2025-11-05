@@ -1,8 +1,23 @@
+const deckGlobal = window.deck;
+const nebulaGlobal = window.nebula;
+
+if (!deckGlobal) {
+  throw new Error(
+    "deck.gl 未正确加载，请检查 CDN 链接或网络环境后重试。"
+  );
+}
+
+if (!nebulaGlobal) {
+  throw new Error(
+    "nebula.gl 未正确加载，无法创建可编辑图层。请确认 CDN 是否可访问。"
+  );
+}
+
 const MODES = {
-  modify: nebula.ModifyMode,
-  translate: nebula.TranslateMode,
-  drawLineString: nebula.DrawLineStringMode,
-  measureDistance: nebula.MeasureDistanceMode,
+  modify: nebulaGlobal.ModifyMode,
+  translate: nebulaGlobal.TranslateMode,
+  drawLineString: nebulaGlobal.DrawLineStringMode,
+  measureDistance: nebulaGlobal.MeasureDistanceMode,
 };
 
 const buttons = Array.from(document.querySelectorAll("button[data-mode]"));
@@ -39,9 +54,9 @@ const initialData = {
 let currentMode = "modify";
 let geojson = initialData;
 
-const deckgl = new deck.DeckGL({
+const deckgl = new deckGlobal.DeckGL({
   container: "deck",
-  views: new deck.MapView({ repeat: true }),
+  views: new deckGlobal.MapView({ repeat: true }),
   initialViewState: {
     longitude: 121.2,
     latitude: 31.0,
@@ -65,7 +80,7 @@ function updateOutput(data) {
 }
 
 function createEditableLayer() {
-  return new nebula.EditableGeoJsonLayer({
+  return new nebulaGlobal.EditableGeoJsonLayer({
     id: "editable-network",
     data: geojson,
     mode: MODES[currentMode],

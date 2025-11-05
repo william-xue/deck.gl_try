@@ -1,5 +1,13 @@
-import * as THREE from "https://unpkg.com/three@0.159.0/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js";
+const THREE = window.THREE;
+const OrbitControls = THREE?.OrbitControls;
+
+if (!THREE) {
+  throw new Error("three.js 未正确加载，请检查网络或 CDN 可用性。");
+}
+
+if (!OrbitControls) {
+  throw new Error("OrbitControls 未找到，确保 examples/js/controls/OrbitControls.js 已成功加载。");
+}
 
 const container = document.getElementById("scene-container");
 const cameraStatusEl = document.getElementById("camera-status");
