@@ -114,12 +114,22 @@
     </section>
 
     <script>
+      /*
+       * 使用指南：矩阵扩展示例
+       * ---------------------------------------
+       * 本页在基础 MVP 基础上新增了 mat4Scale 与 mat4RotateAxis：
+       *  - 先阅读矩阵工具，理解缩放矩阵和任意轴旋转矩阵的推导。
+       *  - 再看 UI 控件如何把用户输入拆分为缩放向量和旋转轴，重点观察归一化步骤。
+       *  - 最后进入 render，跟踪“自动旋转 * 交互变换”的组合顺序，理解矩阵乘法的先后次序。
+       */
       // ======= 扩展矩阵工具函数集合 =======
       function mat4Identity() {
+        // 单位矩阵：后续所有矩阵操作的起点。
         return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
       }
 
       function mat4Multiply(a, b) {
+        // 列主序矩阵乘法：组合多种变换（右乘）。
         const out = new Array(16);
         for (let i = 0; i < 4; i++) {
           const ai0 = a[i];
@@ -135,6 +145,7 @@
       }
 
       function mat4Scale(sx, sy, sz) {
+        // 缩放矩阵：把各轴的缩放因子放入对角线。
         return [
           sx,
           0,
@@ -155,6 +166,7 @@
         ];
       }
 
+      // 任意轴旋转：利用罗德里格斯公式，把用户输入的向量标准化后生成矩阵。
       function mat4RotateAxis(rad, axis) {
         let [x, y, z] = axis;
         const len = Math.hypot(x, y, z);
@@ -189,6 +201,7 @@
         ];
       }
 
+      // 基础旋转矩阵：为自动旋转提供便利函数。
       function mat4RotationY(rad) {
         const c = Math.cos(rad);
         const s = Math.sin(rad);
@@ -236,6 +249,7 @@
       }
 
       function mat4Translation(tx, ty, tz) {
+        // 平移矩阵：把对象移到目标位置。
         const m = mat4Identity();
         m[12] = tx;
         m[13] = ty;
@@ -244,6 +258,7 @@
       }
 
       function mat4Perspective(fovDeg, aspect, near, far) {
+        // 透视投影：fovDeg 为视角（度），aspect 为画布宽高比。
         const fovRad = (fovDeg * Math.PI) / 180;
         const f = 1 / Math.tan(fovRad / 2);
         const nf = 1 / (near - far);
@@ -268,6 +283,7 @@
       }
 
       function mat4LookAt(eye, target, up) {
+        // 视图矩阵：先计算 forward/right/up 三个正交向量，再组合成矩阵。
         const [ex, ey, ez] = eye;
         const [tx, ty, tz] = target;
         const [ux, uy, uz] = up;
@@ -329,6 +345,7 @@
       }
 
       function resizeCanvas() {
+        // 动态调整画布像素尺寸，兼容高分辨率显示器。
         const dpr = window.devicePixelRatio || 1;
         const width = Math.floor(canvas.clientWidth * dpr);
         const height = Math.floor(canvas.clientHeight * dpr);
@@ -339,8 +356,8 @@
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas); // 监听窗口变化，保持视口正确。
+      resizeCanvas(); // 初始化触发一次，避免首帧尺寸错误。
 
       const vsSource = `
         attribute vec3 aPosition;
@@ -364,6 +381,7 @@
       `;
 
       function createShader(gl, type, src) {
+        // 工具函数：编译着色器并输出准确错误。
         const shader = gl.createShader(type);
         gl.shaderSource(shader, src);
         gl.compileShader(shader);
@@ -376,6 +394,7 @@
       }
 
       function createProgram(gl, vsSrc, fsSrc) {
+        // 链接程序：把顶点/片段着色器绑在一起。
         const program = gl.createProgram();
         const vs = createShader(gl, gl.VERTEX_SHADER, vsSrc);
         const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSrc);
@@ -393,13 +412,14 @@
       const program = createProgram(gl, vsSource, fsSource);
       gl.useProgram(program);
 
+      // Attribute / Uniform 句柄：后续缓冲绑定与矩阵更新都依赖这些位置。
       const aPosition = gl.getAttribLocation(program, "aPosition");
       const aColor = gl.getAttribLocation(program, "aColor");
       const uModel = gl.getUniformLocation(program, "uModel");
       const uView = gl.getUniformLocation(program, "uView");
       const uProjection = gl.getUniformLocation(program, "uProjection");
 
-      // 使用立方体几何，加强缩放/旋转后的形变感
+      // 使用立方体几何，加强缩放/旋转后的形变感。
       const positions = new Float32Array([
         -1, -1, 1,
         1, -1, 1,
@@ -453,8 +473,9 @@
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.DEPTH_TEST); // 启用深度缓冲，避免背面穿透。
 
+      // 将界面控件缓存到变量，随时读取最新的缩放和旋转参数。
       const scaleX = document.getElementById("scale-x");
       const scaleY = document.getElementById("scale-y");
       const scaleZ = document.getElementById("scale-z");
@@ -474,11 +495,13 @@
         const angleRad = (Number(axisAngle.value) * Math.PI) / 180;
         const axis = [Number(axisX.value), Number(axisY.value), Number(axisZ.value)];
 
+        // 缩放与任意轴旋转由用户控制，自动旋转提供动态对比。
         const scaleMatrix = mat4Scale(sx, sy, sz);
         const axisMatrix = mat4RotateAxis(angleRad, axis);
         const autoY = mat4RotationY(time * 0.0006 * Math.PI * 2);
         const autoX = mat4RotationX(time * 0.0003 * Math.PI * 2);
 
+        // 组合顺序：先应用固定旋转，再叠加任意轴旋转，最后执行缩放。
         const rotationCombined = mat4Multiply(autoY, mat4Multiply(autoX, axisMatrix));
         const modelMatrix = mat4Multiply(rotationCombined, scaleMatrix);
         const worldMatrix = mat4Multiply(mat4Translation(0, 0, 0), modelMatrix);
@@ -486,16 +509,17 @@
         const viewMatrix = mat4LookAt([4, 4, 8], [0, 0, 0], [0, 1, 0]);
         const projectionMatrix = mat4Perspective(45, canvas.width / canvas.height, 0.1, 100);
 
+        // 把矩阵同步到 GPU，驱动顶点坐标变换。
         gl.uniformMatrix4fv(uModel, false, new Float32Array(worldMatrix));
         gl.uniformMatrix4fv(uView, false, new Float32Array(viewMatrix));
         gl.uniformMatrix4fv(uProjection, false, new Float32Array(projectionMatrix));
 
-        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0); // 使用索引绘制立方体。
 
         requestAnimationFrame(render);
       }
 
-      requestAnimationFrame(render);
+      requestAnimationFrame(render); // 启动动画主循环。
     </script>
   </body>
 </html>

@@ -69,12 +69,21 @@
     </section>
 
     <script>
+      /*
+       * 学习路线提示：
+       * 1. 先理解矩阵工具箱（旋转、平移、透视），这些函数与主站 index.html 相同但略有扩展。
+       * 2. 关注“自定义模型”部分 —— 通过替换 positions/colors 演示如何加载自己的几何数据。
+       * 3. 最后观察 render 循环如何把滑块速度转换为旋转角速度，完成动态展示。
+       */
+
       // ====== 基础矩阵工具（含中文注释） ======
       function mat4Identity() {
+        // 单位矩阵：作为所有线性变换的“起点”，与任何矩阵相乘都不改变结果。
         return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
       }
 
       function mat4Multiply(a, b) {
+        // 列主序矩阵乘法：先应用 b，再应用 a，用于组合多种变换。
         const out = new Array(16);
 
         const a00 = a[0],
@@ -136,6 +145,7 @@
       }
 
       function mat4Rotation(axis, rad) {
+        // 按照指定轴（x/y/z）构造旋转矩阵，用于持续自旋或对齐模型。
         const c = Math.cos(rad);
         const s = Math.sin(rad);
         if (axis === "x") {
@@ -182,6 +192,7 @@
       }
 
       function mat4Perspective(fovDeg, aspect, near, far) {
+        // 透视投影：输入角度与可视范围，输出“近大远小”的投影矩阵。
         const fovRad = (fovDeg * Math.PI) / 180;
         const f = 1 / Math.tan(fovRad / 2);
         const nf = 1 / (near - far);
@@ -206,6 +217,7 @@
       }
 
       function mat4LookAt(eye, target, up) {
+        // 视图矩阵：把场景转换到摄像机坐标系。
         const [ex, ey, ez] = eye;
         const [tx, ty, tz] = target;
         const [ux, uy, uz] = up;
@@ -267,6 +279,7 @@
       }
 
       function resizeCanvas() {
+        // 使用设备像素比调整 Canvas，提升渲染清晰度。
         const dpr = window.devicePixelRatio || 1;
         const width = Math.floor(canvas.clientWidth * dpr);
         const height = Math.floor(canvas.clientHeight * dpr);
@@ -277,9 +290,10 @@
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas); // 浏览器窗口改变大小时重算视口。
+      resizeCanvas(); // 初次调用确保画布尺寸与 CSS 同步。
 
+      // 顶点/片段着色器：与主示例一致，但强调颜色插值。
       const vertexSource = `
         attribute vec3 aPosition;
         attribute vec3 aColor;
@@ -302,6 +316,7 @@
       `;
 
       function createShader(gl, type, src) {
+        // 通用编译函数：失败时抛出可读的中文错误提示。
         const shader = gl.createShader(type);
         gl.shaderSource(shader, src);
         gl.compileShader(shader);
@@ -314,6 +329,7 @@
       }
 
       function createProgram(gl, vsSrc, fsSrc) {
+        // 把顶点/片段着色器链接到同一个 Program。
         const program = gl.createProgram();
         const vs = createShader(gl, gl.VERTEX_SHADER, vsSrc);
         const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSrc);
@@ -338,6 +354,7 @@
       const uProjection = gl.getUniformLocation(program, "uProjection");
 
       // ====== 这里替换为自定义的四面体顶点和颜色 ======
+      // 通过修改 positions/colors，可以把任何模型“塞进”同一套 MVP 管线。
       const tetraPositions = new Float32Array([
         // 顶点顺序：顶点 + 底面三个点组成四个三角面
         // 面 1
@@ -389,9 +406,9 @@
       gl.enableVertexAttribArray(aColor);
       gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
 
-      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.DEPTH_TEST); // 保证三角面遮挡关系正确显示。
 
-      const speedSlider = document.getElementById("rotation-speed");
+      const speedSlider = document.getElementById("rotation-speed"); // 控制旋转速度（度/秒）。
 
       function render(time) {
         resizeCanvas();
@@ -399,22 +416,26 @@
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const speed = Number(speedSlider.value);
-        const t = (time / 1000) * (speed / 180 * Math.PI);
+        const t = (time / 1000) * (speed / 180 * Math.PI); // 将“度/秒”转换为弧度制角速度。
 
+        // 模型矩阵：先绕 Y 轴、再绕 X 轴，突出自定义几何体的立体感。
         const model = mat4Multiply(mat4Rotation("y", t), mat4Rotation("x", t * 0.7));
+        // 视图矩阵：摄像机略微抬高，观察模型整体。
         const view = mat4LookAt([0, 1.5, 6], [0, 0, 0], [0, 1, 0]);
+        // 投影矩阵：固定 45° 视角，兼顾近景与远景。
         const projection = mat4Perspective(45, canvas.width / canvas.height, 0.1, 100);
 
+        // 将矩阵上传给 GPU。
         gl.uniformMatrix4fv(uModel, false, new Float32Array(model));
         gl.uniformMatrix4fv(uView, false, new Float32Array(view));
         gl.uniformMatrix4fv(uProjection, false, new Float32Array(projection));
 
-        gl.drawArrays(gl.TRIANGLES, 0, tetraPositions.length / 3);
+        gl.drawArrays(gl.TRIANGLES, 0, tetraPositions.length / 3); // 无索引绘制全部三角面。
 
         requestAnimationFrame(render);
       }
 
-      requestAnimationFrame(render);
+      requestAnimationFrame(render); // 启动主循环。
     </script>
   </body>
 </html>

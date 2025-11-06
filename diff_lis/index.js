@@ -2,8 +2,20 @@
 // 运行方式：node index.js
 
 /**
- * 这个脚本演示 Vue/React 在列表更新时常用的 "双指针 + key + 最长递增子序列" 思路。
- * 我们对两组 key 列表做对比，输出每一步操作，帮助你体会算法流程。
+ * 教学导读：
+ * 1. 列表 Diff 问题背景
+ *    - 在前端框架（Vue/React/RSC 等）里，虚拟 DOM 列表的增删改几乎每天都会发生。
+ *    - “key + Diff + 最长递增子序列(LIS)” 是主流框架用来避免全量重排的核心套路：
+ *      · key 用来识别节点身份；
+ *      · 双指针负责快速跳过头尾不变的部分；
+ *      · 中间段通过索引映射 + LIS 计算找出“能够保持相对顺序”的节点，其余节点则移动或插入删除。
+ * 2. 学习目标
+ *    - 跟着 console 输出一路看下来，弄懂每一步为什么发生；
+ *    - 搞清楚“保持”“删除”“插入”“移动”的判断依据；
+ *    - 把这些步骤映射到真实项目中（例如 RSC 客户端补水、表格增删行、电力系统拓扑的节点同步）。
+ * 3. 使用方法
+ *    - `node index.js` 即可运行 3 组预置案例，建议逐个分析打印的信息；
+ *    - 想用自己的数据做实验，可以在 demoCases 里追加新的 oldList/newList。
  */
 
 // 主流程入口
@@ -21,6 +33,8 @@ function diffWithLIS(oldList, newList) {
   let newEnd = newList.length - 1;
 
   // 1. 双指针：跳过相同头部
+  //   场景：例如页面顶部有固定导航栏，数据更新时往往保持不变；
+  //   做法：使用两个指针从头往后走，只要 key 一致就直接标记为“保留”，复杂度 O(k)。
   while (
     oldStart <= oldEnd &&
     newStart <= newEnd &&
@@ -32,6 +46,8 @@ function diffWithLIS(oldList, newList) {
   }
 
   // 2. 双指针：跳过相同尾部
+  //   场景：尾部常见的是页脚、底部工具栏等，也可以快速跳过；
+  //   注意：只有在双指针未交叉时才能继续，否则说明头尾全部对齐、无需后续步骤。
   while (
     oldStart <= oldEnd &&
     newStart <= newEnd &&
@@ -42,7 +58,8 @@ function diffWithLIS(oldList, newList) {
     newEnd--;
   }
 
-  // 截取剩余区段，后续只处理中间需要重排的部分
+  // 截取剩余区段，后续只处理中间需要重排的部分。
+  // 这一步直观地把问题规模由 n 缩小到 m（中间段长度），后续复杂度都围绕这个 m 展开。
   const oldMiddle = oldList.slice(oldStart, oldEnd + 1);
   const newMiddle = newList.slice(newStart, newEnd + 1);
 
@@ -50,6 +67,7 @@ function diffWithLIS(oldList, newList) {
   console.log("需要处理的新区段:", newMiddle, "\n");
 
   // 3. 构建旧节点索引表（便于按 key 查找）
+  //    作用：O(1) 查找旧节点在 oldMiddle 中的索引，为 LIS 做准备。
   const oldIndexMap = new Map();
   oldMiddle.forEach((key, index) => oldIndexMap.set(key, index));
 
@@ -68,6 +86,7 @@ function diffWithLIS(oldList, newList) {
   });
 
   // 4. 找出旧区段里需要删除的节点
+  //    实际含义：新列表里不存在的 key 直接删掉，避免无意义的移动。
   const newKeySet = new Set(newMiddle);
   oldMiddle.forEach((key, index) => {
     if (!newKeySet.has(key)) {
@@ -75,7 +94,9 @@ function diffWithLIS(oldList, newList) {
     }
   });
 
-  // 5. 对可复用节点的旧索引序列求 LIS，确定哪些节点可以保持相对顺序
+  // 5. 对可复用节点的旧索引序列求 LIS，确定哪些节点可以保持相对顺序。
+  //    直觉：LIS 找到的是“已经按相对顺序排列”的最长子序列，我们无需移动它们；
+  //    非 LIS 的节点则需要通过“移动”指令调整到新位置。
   const lisEntryIndices = calcLISEntryIndices(positionSequence);
   const stableNewIndices = new Set(lisEntryIndices.map((seqIndex) => sequenceToNewIndex[seqIndex]));
 
@@ -115,6 +136,7 @@ function calcLISEntryIndices(sequence) {
   const n = sequence.length;
   if (n === 0) return [];
 
+  // predecessors 用于回溯路径；tails 记录当前长度的最优结尾索引
   const predecessors = new Array(n).fill(-1);
   const tails = [];
   const tailsIndex = [];
@@ -157,7 +179,11 @@ function calcLISEntryIndices(sequence) {
   return lisIndices;
 }
 
-// 实际运行并输出多个案例，便于对比体会
+// 实际运行并输出多个案例，便于对比体会。
+// 解析建议：
+//  · 案例 1 —— 用于熟悉“只有头尾改变”的最小差异情形，观察双指针如何直接跳过。
+//  · 案例 2 —— 同时包含新增/删除/移动，类似实时数据面板中更新图表条目的场景。
+//  · 案例 3 —— 强化对 LIS 的理解，看看哪些节点被判定为稳定顺序，哪些需要移动。
 if (require.main === module) {
   const demoCases = [
     {

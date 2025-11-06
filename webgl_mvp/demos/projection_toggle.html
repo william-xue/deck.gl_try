@@ -113,8 +113,16 @@
     </section>
 
     <script>
+      /*
+       * 学习目标：动态切换透视投影与正交投影
+       * ---------------------------------------
+       * 1. 通过按钮切换 `projectionMode`，结合 UI 控件体验两种投影的差异。
+       * 2. 观察渲染循环中如何根据模式选择 `mat4Perspective` 或 `mat4Ortho`。
+       * 3. 扩展思路：在数据可视化或电力仿真场景中，如何根据业务需求选择投影方式。
+       */
       // ===== 矩阵工具 =====
       function mat4Multiply(a, b) {
+        // 列主序矩阵乘法：组合多重变换。
         const out = new Array(16);
         for (let i = 0; i < 4; i++) {
           const ai0 = a[i];
@@ -130,6 +138,7 @@
       }
 
       function mat4RotationY(rad) {
+        // 绕 Y 轴旋转：用于自动旋转演示近大远小。
         const c = Math.cos(rad);
         const s = Math.sin(rad);
         return [
@@ -153,6 +162,7 @@
       }
 
       function mat4RotationX(rad) {
+        // 绕 X 轴旋转：让立方体呈现更多面。
         const c = Math.cos(rad);
         const s = Math.sin(rad);
         return [
@@ -176,6 +186,7 @@
       }
 
       function mat4Perspective(fovDeg, aspect, near, far) {
+        // 透视投影：体现近大远小。
         const fovRad = (fovDeg * Math.PI) / 180;
         const f = 1 / Math.tan(fovRad / 2);
         const nf = 1 / (near - far);
@@ -200,6 +211,7 @@
       }
 
       function mat4Ortho(left, right, bottom, top, near, far) {
+        // 正交投影：保持物体尺寸不变。
         const lr = 1 / (left - right);
         const bt = 1 / (bottom - top);
         const nf = 1 / (near - far);
@@ -224,6 +236,7 @@
       }
 
       function mat4LookAt(eye, target, up) {
+        // 视图矩阵：把世界对齐到摄像机坐标系。
         const [ex, ey, ez] = eye;
         const [tx, ty, tz] = target;
         const [ux, uy, uz] = up;
@@ -285,6 +298,7 @@
       }
 
       function resizeCanvas() {
+        // 根据设备像素比动态调整画布，保证清晰度。
         const dpr = window.devicePixelRatio || 1;
         const width = Math.floor(canvas.clientWidth * dpr);
         const height = Math.floor(canvas.clientHeight * dpr);
@@ -295,8 +309,8 @@
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas); // 同步窗口变化。
+      resizeCanvas(); // 初始化一次，防止首帧模糊。
 
       const vsSource = `
         attribute vec3 aPosition;
@@ -320,6 +334,7 @@
       `;
 
       function createShader(gl, type, src) {
+        // 编译着色器并在报错时提供中文提示。
         const shader = gl.createShader(type);
         gl.shaderSource(shader, src);
         gl.compileShader(shader);
@@ -332,6 +347,7 @@
       }
 
       function createProgram(gl, vsSrc, fsSrc) {
+        // 把顶点/片段着色器链接起来。
         const program = gl.createProgram();
         const vs = createShader(gl, gl.VERTEX_SHADER, vsSrc);
         const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSrc);
@@ -349,6 +365,7 @@
       const program = createProgram(gl, vsSource, fsSource);
       gl.useProgram(program);
 
+      // Attribute / Uniform 位置查找。
       const aPosition = gl.getAttribLocation(program, "aPosition");
       const aColor = gl.getAttribLocation(program, "aColor");
       const uModel = gl.getUniformLocation(program, "uModel");
@@ -392,24 +409,28 @@
         4, 1, 0,
       ]);
 
+      // 顶点缓冲：存储立方体 8 个顶点。
       const positionBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
       gl.enableVertexAttribArray(aPosition);
       gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 
+      // 颜色缓冲：指定两种对比色，便于观察。
       const colorBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
       gl.enableVertexAttribArray(aColor);
       gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
 
+      // 索引缓冲：减少重复顶点。
       const indexBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.DEPTH_TEST); // 开启深度测试，保证透视/正交模式下遮挡正确。
 
+      // UI 元件：按钮控制模式，滑块配置投影参数。
       const toggleBtn = document.getElementById("toggle-mode");
       const badge = document.getElementById("mode-badge");
       const perspControl = document.getElementById("persp-control");
@@ -417,9 +438,10 @@
       const fovSlider = document.getElementById("fov-slider");
       const orthoSlider = document.getElementById("ortho-slider");
 
-      let projectionMode = "perspective";
+      let projectionMode = "perspective"; // 默认使用透视投影。
 
       function updateModeUI() {
+        // 根据当前模式调整按钮文本与滑块可见性。
         if (projectionMode === "perspective") {
           toggleBtn.textContent = "切换到正交投影";
           badge.textContent = "当前：透视投影";
@@ -435,6 +457,7 @@
 
       updateModeUI();
 
+      // 点击按钮在两种投影模式之间切换。
       toggleBtn.addEventListener("click", () => {
         projectionMode = projectionMode === "perspective" ? "orthographic" : "perspective";
         updateModeUI();
@@ -442,8 +465,8 @@
 
       function render(time) {
         resizeCanvas();
-        gl.clearColor(0.06, 0.09, 0.18, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.clearColor(0.06, 0.09, 0.18, 1); // 设置夜空背景色。
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // 清理上一帧。
 
         const t = time / 1000;
         const model = mat4Multiply(mat4RotationY(t * 0.7), mat4RotationX(t * 0.3));
@@ -463,12 +486,12 @@
         gl.uniformMatrix4fv(uView, false, new Float32Array(view));
         gl.uniformMatrix4fv(uProjection, false, new Float32Array(projection));
 
-        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0); // 绘制旋转立方体。
 
         requestAnimationFrame(render);
       }
 
-      requestAnimationFrame(render);
+      requestAnimationFrame(render); // 启动 render 循环。
     </script>
   </body>
 </html>
